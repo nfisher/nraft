@@ -1,0 +1,2 @@
+# nraft
+Raft algorithm
