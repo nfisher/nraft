@@ -28,11 +28,13 @@ func requestVote(r *Raft) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		r.Persistent.RLock()
 		defer r.Persistent.RUnlock()
+
 		r.Volatile.RLock()
 		defer r.Volatile.RUnlock()
-		defer req.Body.Close()
 
 		var requestVote RequestVote
+
+		defer req.Body.Close()
 		err := json.NewDecoder(req.Body).Decode(&requestVote)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -48,17 +50,8 @@ func requestVote(r *Raft) func(w http.ResponseWriter, req *http.Request) {
 			voteResponse.VoteGranted = false
 		}
 
-		if r.Persistent.VotedFor != nil {
-			if len(r.Persistent.VotedFor) == len(requestVote.CandidateID) {
-				for i := range r.Persistent.VotedFor {
-					if r.Persistent.VotedFor[i] != requestVote.CandidateID[i] {
-						voteResponse.VoteGranted = false
-						break
-					}
-				}
-			} else {
-				voteResponse.VoteGranted = false
-			}
+		if r.HasVoted() && !r.HasVotedFor(requestVote.CandidateID) {
+			voteResponse.VoteGranted = false
 		}
 
 		if r.Volatile.CommitIndex > requestVote.LastLogIndex {
