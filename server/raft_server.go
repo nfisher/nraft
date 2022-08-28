@@ -34,5 +34,6 @@ func (r *Raft) HasVotedFor(candidateID [16]byte) bool {
 func (r *Raft) Mux() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/request_vote", requestVote(r))
+	mux.HandleFunc("/append_entries", appendEntries(r))
 	return mux
 }

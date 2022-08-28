@@ -35,7 +35,5 @@ type Leader struct {
 }
 
 type Command struct {
-	Term  Term
-	Key   string
-	Value interface{}
+	Term Term
 }
