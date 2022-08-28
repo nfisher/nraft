@@ -13,15 +13,6 @@ type Raft struct {
 	Addr       string
 }
 
-func (r *Raft) LastTerm() state.Term {
-	i := r.Volatile.CommitIndex
-	if r.Volatile.CommitIndex < 1 {
-		return 0
-	}
-
-	return r.Persistent.Log[i-1].Term
-}
-
 func (r *Raft) HasVoted() bool {
 	return r.Persistent.VotedFor != nil
 }
