@@ -116,14 +116,14 @@ func callAppendEntries(follower *server.Raft, requestVote server.AppendEntries) 
 	ts.Start()
 	defer ts.Close()
 
-	buf, err := encode(&requestVote)
+	buf, err := server.Encode(&requestVote)
 	if err != nil {
 		panic(err)
 	}
 
 	client := ts.Client()
 
-	resp, err2 := client.Post(ts.URL+"/append_entries", "application/json", buf)
+	resp, err2 := client.Post(ts.URL+"/append_entries", "application/msgpack", buf)
 	if err2 != nil {
 		panic(err2)
 	}
@@ -131,7 +131,7 @@ func callAppendEntries(follower *server.Raft, requestVote server.AppendEntries) 
 		panic(resp.StatusCode)
 	}
 
-	err3 := decode(resp.Body, &followerResp)
+	err3 := server.Decode(resp.Body, &followerResp)
 	if err3 != nil && err3 != io.EOF {
 		panic(err3)
 	}

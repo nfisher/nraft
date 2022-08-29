@@ -138,14 +138,14 @@ func callRequestVote(follower *server.Raft, requestVote server.RequestVote) *ser
 	ts.Start()
 	defer ts.Close()
 
-	buf, err := encode(&requestVote)
+	buf, err := server.Encode(&requestVote)
 	if err != nil {
 		panic(err)
 	}
 
 	client := ts.Client()
 
-	resp, err2 := client.Post(ts.URL+"/request_vote", "application/json", buf)
+	resp, err2 := client.Post(ts.URL+"/request_vote", "application/msgpack", buf)
 	if err2 != nil {
 		panic(err2)
 	}
@@ -153,7 +153,7 @@ func callRequestVote(follower *server.Raft, requestVote server.RequestVote) *ser
 		panic(resp.StatusCode)
 	}
 
-	err3 := decode(resp.Body, &followerResp)
+	err3 := server.Decode(resp.Body, &followerResp)
 	if err3 != nil && err3 != io.EOF {
 		panic(err3)
 	}

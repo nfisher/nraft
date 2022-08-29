@@ -1,10 +1,7 @@
 package server_test
 
 import (
-	"bytes"
-	"encoding/json"
 	"github.com/nfisher/nraft/state"
-	"io"
 	"testing"
 )
 
@@ -83,17 +80,4 @@ func (a intAssert) EqualTo(expected int) {
 	if a.actual != expected {
 		a.Errorf("want %v, got %v", expected, a.actual)
 	}
-}
-
-func encode(req interface{}) (*bytes.Buffer, error) {
-	buf, err := json.Marshal(&req)
-	if err != nil {
-		panic(err)
-	}
-
-	return bytes.NewBuffer(buf), nil
-}
-
-func decode(r io.Reader, resp interface{}) error {
-	return json.NewDecoder(r).Decode(resp)
 }

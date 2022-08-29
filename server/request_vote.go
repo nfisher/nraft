@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"github.com/nfisher/nraft/state"
 	"net/http"
 )
@@ -35,7 +34,7 @@ func requestVote(r *Raft) func(w http.ResponseWriter, req *http.Request) {
 		var requestVote RequestVote
 
 		defer req.Body.Close()
-		err := json.NewDecoder(req.Body).Decode(&requestVote)
+		err := Decode(req.Body, &requestVote)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -58,7 +57,7 @@ func requestVote(r *Raft) func(w http.ResponseWriter, req *http.Request) {
 			voteResponse.VoteGranted = false
 		}
 
-		err = json.NewEncoder(w).Encode(&voteResponse)
+		err = EncodeTo(w, &voteResponse)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

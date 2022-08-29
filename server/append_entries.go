@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"github.com/nfisher/nraft/state"
 	"net/http"
 )
@@ -31,7 +30,7 @@ func appendEntries(r *Raft) func(w http.ResponseWriter, req *http.Request) {
 		var appendEntries AppendEntries
 
 		defer req.Body.Close()
-		err := json.NewDecoder(req.Body).Decode(&appendEntries)
+		err := Decode(req.Body, &appendEntries)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -53,7 +52,7 @@ func appendEntries(r *Raft) func(w http.ResponseWriter, req *http.Request) {
 			r.Persistent.Log = r.Persistent.Log[:appendEntries.PrevLogIndex-1]
 		}
 
-		err = json.NewEncoder(w).Encode(&appendResponse)
+		err = EncodeTo(w, &appendResponse)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
