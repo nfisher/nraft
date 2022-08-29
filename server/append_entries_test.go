@@ -1,8 +1,6 @@
 package server_test
 
 import (
-	"bytes"
-	"encoding/json"
 	"github.com/nfisher/nraft/server"
 	"github.com/nfisher/nraft/state"
 	"io"
@@ -11,7 +9,7 @@ import (
 	"testing"
 )
 
-func Test_should_respond_success_if_follower_is_synchronised(t *testing.T) {
+func Test_heartbeat_should_respond_success_if_follower_is_synchronised(t *testing.T) {
 	assert := Assert{t}
 
 	follower := &server.Raft{
@@ -41,7 +39,7 @@ func Test_should_respond_success_if_follower_is_synchronised(t *testing.T) {
 	assert.Term(followerResp.Term).EqualTo(2)
 }
 
-func Test_should_respond_failure_if_log_term_differs(t *testing.T) {
+func Test_heartbeat_should_respond_failure_if_log_term_differs(t *testing.T) {
 	assert := Assert{t}
 
 	follower := &server.Raft{
@@ -65,9 +63,10 @@ func Test_should_respond_failure_if_log_term_differs(t *testing.T) {
 
 	assert.IsFalse(followerResp.Success)
 	assert.Term(followerResp.Term).EqualTo(2)
+	assert.Int(len(follower.Persistent.Log)).EqualTo(0)
 }
 
-func Test_should_respond_failure_if_log_shorter_than_request(t *testing.T) {
+func Test_heartbeat_should_respond_failure_if_log_shorter_than_request(t *testing.T) {
 	assert := Assert{t}
 
 	follower := &server.Raft{
@@ -90,7 +89,7 @@ func Test_should_respond_failure_if_log_shorter_than_request(t *testing.T) {
 	assert.Term(followerResp.Term).EqualTo(1)
 }
 
-func Test_should_respond_failure_if_term_less_than_receiver(t *testing.T) {
+func Test_heartbeat_should_respond_failure_if_term_less_than_receiver(t *testing.T) {
 	assert := Assert{t}
 
 	follower := &server.Raft{
@@ -117,14 +116,14 @@ func callAppendEntries(follower *server.Raft, requestVote server.AppendEntries) 
 	ts.Start()
 	defer ts.Close()
 
-	buf, err := json.Marshal(&requestVote)
+	buf, err := encode(&requestVote)
 	if err != nil {
 		panic(err)
 	}
 
 	client := ts.Client()
 
-	resp, err2 := client.Post(ts.URL+"/append_entries", "application/json", bytes.NewBuffer(buf))
+	resp, err2 := client.Post(ts.URL+"/append_entries", "application/json", buf)
 	if err2 != nil {
 		panic(err2)
 	}
@@ -132,7 +131,7 @@ func callAppendEntries(follower *server.Raft, requestVote server.AppendEntries) 
 		panic(resp.StatusCode)
 	}
 
-	err3 := json.NewDecoder(resp.Body).Decode(&followerResp)
+	err3 := decode(resp.Body, &followerResp)
 	if err3 != nil && err3 != io.EOF {
 		panic(err3)
 	}

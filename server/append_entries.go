@@ -50,6 +50,7 @@ func appendEntries(r *Raft) func(w http.ResponseWriter, req *http.Request) {
 			appendResponse.Success = false
 		} else if appendEntries.PrevLogIndex > 0 && r.Persistent.Log[appendEntries.PrevLogIndex-1].Term != appendEntries.PrevLogTerm {
 			appendResponse.Success = false
+			r.Persistent.Log = r.Persistent.Log[:appendEntries.PrevLogIndex-1]
 		}
 
 		err = json.NewEncoder(w).Encode(&appendResponse)

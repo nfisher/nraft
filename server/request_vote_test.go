@@ -1,8 +1,6 @@
 package server_test
 
 import (
-	"bytes"
-	"encoding/json"
 	"github.com/nfisher/nraft/server"
 	"github.com/nfisher/nraft/state"
 	"io"
@@ -140,14 +138,14 @@ func callRequestVote(follower *server.Raft, requestVote server.RequestVote) *ser
 	ts.Start()
 	defer ts.Close()
 
-	buf, err := json.Marshal(&requestVote)
+	buf, err := encode(&requestVote)
 	if err != nil {
 		panic(err)
 	}
 
 	client := ts.Client()
 
-	resp, err2 := client.Post(ts.URL+"/request_vote", "application/json", bytes.NewBuffer(buf))
+	resp, err2 := client.Post(ts.URL+"/request_vote", "application/json", buf)
 	if err2 != nil {
 		panic(err2)
 	}
@@ -155,7 +153,7 @@ func callRequestVote(follower *server.Raft, requestVote server.RequestVote) *ser
 		panic(resp.StatusCode)
 	}
 
-	err3 := json.NewDecoder(resp.Body).Decode(&followerResp)
+	err3 := decode(resp.Body, &followerResp)
 	if err3 != nil && err3 != io.EOF {
 		panic(err3)
 	}
