@@ -14,7 +14,7 @@ func (r *Raft) HasVoted() bool {
 	return r.Persistent.VotedFor != nil
 }
 
-func (r *Raft) HasVotedFor(candidateID [16]byte) bool {
+func (r *Raft) HasVotedFor(candidateID []byte) bool {
 	if len(r.Persistent.VotedFor) != len(candidateID) {
 		return false
 	}
@@ -38,16 +38,24 @@ func (r *Raft) VoteRequest(requestVote RequestVoteRequest, voteResponse *Request
 	voteResponse.Term = r.Persistent.CurrentTerm
 	voteResponse.VoteGranted = true
 
+	if len(requestVote.CandidateID) == 0 {
+		voteResponse.VoteGranted = false
+		return
+	}
+
 	if r.Persistent.CurrentTerm > requestVote.Term {
 		voteResponse.VoteGranted = false
+		return
 	}
 
 	if r.HasVoted() && !r.HasVotedFor(requestVote.CandidateID) {
 		voteResponse.VoteGranted = false
+		return
 	}
 
 	if r.Volatile.CommitIndex > requestVote.LastLogIndex {
 		voteResponse.VoteGranted = false
+		return
 	}
 }
 

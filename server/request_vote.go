@@ -7,7 +7,7 @@ import (
 
 type RequestVoteRequest struct {
 	// CandidateID is candidate requesting vote.
-	CandidateID [16]byte `json:"candidate_id"`
+	CandidateID []byte `json:"candidate_id"`
 	// LastLogIndex is index of candidate’s last log entry.
 	LastLogIndex int `json:"last_log_index"`
 	// LastLogTerm is term of candidate’s last log entry.

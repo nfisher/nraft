@@ -9,24 +9,30 @@ import (
 	"testing"
 )
 
+func expand(b []byte) []byte {
+	var b2 = make([]byte, 16, 16)
+	for i, v := range b {
+		if i >= len(b2) {
+			break
+		}
+		b2[i] = v
+	}
+	return b2
+}
+
 func Test_should_accept_candidate_if_voted_for_them_previously(t *testing.T) {
 	assert := Assert{t}
 
 	follower := &server.Raft{
 		Persistent: state.Persistent{
 			CurrentTerm: 2,
-			VotedFor: []byte{
-				01, 0, 0, 0,
-				0, 0, 0, 0,
-				0, 0, 0, 0,
-				0, 0, 0, 0,
-			},
+			VotedFor:    expand([]byte{01}),
 		},
 	}
 
 	requestVote := server.RequestVoteRequest{
 		Term:        2,
-		CandidateID: [16]byte{01},
+		CandidateID: expand([]byte{01}),
 	}
 
 	followerResp := callRequestVote(follower, requestVote)
@@ -46,12 +52,31 @@ func Test_should_accept_candidate_if_not_voted(t *testing.T) {
 
 	requestVote := server.RequestVoteRequest{
 		Term:        2,
-		CandidateID: [16]byte{01},
+		CandidateID: expand([]byte{01}),
 	}
 
 	followerResp := callRequestVote(follower, requestVote)
 
 	assert.IsTrue(followerResp.VoteGranted)
+	assert.Term(followerResp.Term).EqualTo(1)
+}
+
+func Test_should_reject_candidate_if_id_is_empty(t *testing.T) {
+	assert := Assert{t}
+
+	follower := &server.Raft{
+		Persistent: state.Persistent{
+			CurrentTerm: 1,
+		},
+	}
+
+	requestVote := server.RequestVoteRequest{
+		Term: 2,
+	}
+
+	followerResp := callRequestVote(follower, requestVote)
+
+	assert.IsFalse(followerResp.VoteGranted)
 	assert.Term(followerResp.Term).EqualTo(1)
 }
 
@@ -66,7 +91,7 @@ func Test_should_reject_candidate_if_term_less_than_receiver(t *testing.T) {
 
 	requestVote := server.RequestVoteRequest{
 		Term:        1,
-		CandidateID: [16]byte{01},
+		CandidateID: expand([]byte{01}),
 	}
 
 	followerResp := callRequestVote(follower, requestVote)
@@ -81,19 +106,14 @@ func Test_should_reject_candidate_if_voted_for_other_candidate(t *testing.T) {
 	follower := &server.Raft{
 		Persistent: state.Persistent{
 			CurrentTerm: 1,
-			VotedFor: []byte{
-				02, 00, 00, 00,
-				00, 00, 00, 00,
-				00, 00, 00, 00,
-				00, 00, 00, 00,
-			},
+			VotedFor:    expand([]byte{02}),
 		},
 		Volatile: state.Volatile{},
 	}
 
 	requestVote := server.RequestVoteRequest{
 		Term:        1,
-		CandidateID: [16]byte{01},
+		CandidateID: expand([]byte{01}),
 	}
 
 	followerResp := callRequestVote(follower, requestVote)
@@ -120,7 +140,7 @@ func Test_should_reject_candidate_if_log_index_is_behind(t *testing.T) {
 
 	requestVote := server.RequestVoteRequest{
 		Term:         3,
-		CandidateID:  [16]byte{01},
+		CandidateID:  expand([]byte{01}),
 		LastLogTerm:  1,
 		LastLogIndex: 1,
 	}
