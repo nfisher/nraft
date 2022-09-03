@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-type RequestVote struct {
+type RequestVoteRequest struct {
 	// CandidateID is candidate requesting vote.
 	CandidateID [16]byte `json:"candidate_id"`
 	// LastLogIndex is index of candidate’s last log entry.
@@ -25,13 +25,12 @@ type RequestVoteResponse struct {
 
 func requestVote(r *Raft) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		r.Persistent.RLock()
-		defer r.Persistent.RUnlock()
+		if req.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
 
-		r.Volatile.RLock()
-		defer r.Volatile.RUnlock()
-
-		var requestVote RequestVote
+		var requestVote RequestVoteRequest
 
 		defer req.Body.Close()
 		err := Decode(req.Body, &requestVote)
@@ -40,24 +39,11 @@ func requestVote(r *Raft) func(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		var voteResponse = RequestVoteResponse{
-			Term:        r.Persistent.CurrentTerm,
-			VoteGranted: true,
-		}
+		var voteResponse = &RequestVoteResponse{}
 
-		if r.Persistent.CurrentTerm > requestVote.Term {
-			voteResponse.VoteGranted = false
-		}
+		r.VoteRequest(requestVote, voteResponse)
 
-		if r.HasVoted() && !r.HasVotedFor(requestVote.CandidateID) {
-			voteResponse.VoteGranted = false
-		}
-
-		if r.Volatile.CommitIndex > requestVote.LastLogIndex {
-			voteResponse.VoteGranted = false
-		}
-
-		err = EncodeTo(w, &voteResponse)
+		err = EncodeTo(w, voteResponse)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

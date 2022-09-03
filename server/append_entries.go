@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-type AppendEntries struct {
+type AppendEntriesRequest struct {
 	Term         state.Term      `json:"term"`
 	LeaderID     [16]byte        `json:"leader_id"`
 	PrevLogIndex int             `json:"prev_log_index"`
@@ -21,13 +21,12 @@ type AppendEntriesResponse struct {
 
 func appendEntries(r *Raft) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		r.Persistent.RLock()
-		defer r.Persistent.RUnlock()
+		if req.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
 
-		r.Volatile.RLock()
-		defer r.Volatile.RUnlock()
-
-		var appendEntries AppendEntries
+		var appendEntries AppendEntriesRequest
 
 		defer req.Body.Close()
 		err := Decode(req.Body, &appendEntries)
@@ -36,23 +35,11 @@ func appendEntries(r *Raft) func(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		var appendResponse = AppendEntriesResponse{
-			Success: true,
-			Term:    r.Persistent.CurrentTerm,
-		}
+		var appendResponse = &AppendEntriesResponse{}
 
-		if r.Persistent.CurrentTerm > appendEntries.Term {
-			appendResponse.Success = false
-		}
+		r.AppendEntries(appendEntries, appendResponse)
 
-		if len(r.Persistent.Log) < appendEntries.PrevLogIndex {
-			appendResponse.Success = false
-		} else if appendEntries.PrevLogIndex > 0 && r.Persistent.Log[appendEntries.PrevLogIndex-1].Term != appendEntries.PrevLogTerm {
-			appendResponse.Success = false
-			r.Persistent.Log = r.Persistent.Log[:appendEntries.PrevLogIndex-1]
-		}
-
-		err = EncodeTo(w, &appendResponse)
+		err = EncodeTo(w, appendResponse)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

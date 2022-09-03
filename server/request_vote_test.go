@@ -24,7 +24,7 @@ func Test_should_accept_candidate_if_voted_for_them_previously(t *testing.T) {
 		},
 	}
 
-	requestVote := server.RequestVote{
+	requestVote := server.RequestVoteRequest{
 		Term:        2,
 		CandidateID: [16]byte{01},
 	}
@@ -44,7 +44,7 @@ func Test_should_accept_candidate_if_not_voted(t *testing.T) {
 		},
 	}
 
-	requestVote := server.RequestVote{
+	requestVote := server.RequestVoteRequest{
 		Term:        2,
 		CandidateID: [16]byte{01},
 	}
@@ -64,7 +64,7 @@ func Test_should_reject_candidate_if_term_less_than_receiver(t *testing.T) {
 		},
 	}
 
-	requestVote := server.RequestVote{
+	requestVote := server.RequestVoteRequest{
 		Term:        1,
 		CandidateID: [16]byte{01},
 	}
@@ -91,7 +91,7 @@ func Test_should_reject_candidate_if_voted_for_other_candidate(t *testing.T) {
 		Volatile: state.Volatile{},
 	}
 
-	requestVote := server.RequestVote{
+	requestVote := server.RequestVoteRequest{
 		Term:        1,
 		CandidateID: [16]byte{01},
 	}
@@ -118,7 +118,7 @@ func Test_should_reject_candidate_if_log_index_is_behind(t *testing.T) {
 		},
 	}
 
-	requestVote := server.RequestVote{
+	requestVote := server.RequestVoteRequest{
 		Term:         3,
 		CandidateID:  [16]byte{01},
 		LastLogTerm:  1,
@@ -131,10 +131,24 @@ func Test_should_reject_candidate_if_log_index_is_behind(t *testing.T) {
 	assert.Term(followerResp.Term).EqualTo(2)
 }
 
-func callRequestVote(follower *server.Raft, requestVote server.RequestVote) *server.RequestVoteResponse {
+func Test_get_request_vote_should_fail(t *testing.T) {
+	assert := Assert{t}
+	follower := &server.Raft{}
+
+	ts := httptest.NewUnstartedServer(server.Mux(follower))
+	ts.Start()
+	defer ts.Close()
+
+	client := ts.Client()
+	resp, err := client.Get(ts.URL + "/request_vote")
+	assert.NilError(err)
+	assert.Int(resp.StatusCode).EqualTo(http.StatusMethodNotAllowed)
+}
+
+func callRequestVote(follower *server.Raft, requestVote server.RequestVoteRequest) *server.RequestVoteResponse {
 	var followerResp server.RequestVoteResponse
 
-	ts := httptest.NewUnstartedServer(follower.Mux())
+	ts := httptest.NewUnstartedServer(server.Mux(follower))
 	ts.Start()
 	defer ts.Close()
 

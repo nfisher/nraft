@@ -25,7 +25,7 @@ func Test_heartbeat_should_respond_success_if_follower_is_synchronised(t *testin
 		},
 	}
 
-	appendEntries := server.AppendEntries{
+	appendEntries := server.AppendEntriesRequest{
 		Term:         2,
 		LeaderID:     [16]byte{01},
 		PrevLogIndex: 2,
@@ -51,7 +51,7 @@ func Test_heartbeat_should_respond_failure_if_log_term_differs(t *testing.T) {
 		},
 	}
 
-	appendEntries := server.AppendEntries{
+	appendEntries := server.AppendEntriesRequest{
 		Term:         3,
 		LeaderID:     [16]byte{01},
 		PrevLogIndex: 1,
@@ -75,7 +75,7 @@ func Test_heartbeat_should_respond_failure_if_log_shorter_than_request(t *testin
 		},
 	}
 
-	appendEntries := server.AppendEntries{
+	appendEntries := server.AppendEntriesRequest{
 		Term:         2,
 		LeaderID:     [16]byte{01},
 		PrevLogIndex: 1,
@@ -98,7 +98,7 @@ func Test_heartbeat_should_respond_failure_if_term_less_than_receiver(t *testing
 		},
 	}
 
-	appendEntries := server.AppendEntries{
+	appendEntries := server.AppendEntriesRequest{
 		Term:     1,
 		LeaderID: [16]byte{01},
 	}
@@ -109,10 +109,24 @@ func Test_heartbeat_should_respond_failure_if_term_less_than_receiver(t *testing
 	assert.Term(followerResp.Term).EqualTo(2)
 }
 
-func callAppendEntries(follower *server.Raft, requestVote server.AppendEntries) *server.AppendEntriesResponse {
+func Test_get_append_entries_should_fail(t *testing.T) {
+	assert := Assert{t}
+	follower := &server.Raft{}
+
+	ts := httptest.NewUnstartedServer(server.Mux(follower))
+	ts.Start()
+	defer ts.Close()
+
+	client := ts.Client()
+	resp, err := client.Get(ts.URL + "/append_entries")
+	assert.NilError(err)
+	assert.Int(resp.StatusCode).EqualTo(http.StatusMethodNotAllowed)
+}
+
+func callAppendEntries(follower *server.Raft, requestVote server.AppendEntriesRequest) *server.AppendEntriesResponse {
 	var followerResp server.AppendEntriesResponse
 
-	ts := httptest.NewUnstartedServer(follower.Mux())
+	ts := httptest.NewUnstartedServer(server.Mux(follower))
 	ts.Start()
 	defer ts.Close()
 
